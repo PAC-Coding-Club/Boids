@@ -3,11 +3,11 @@ import random
 import pygame
 
 debug = False
-speed = 3
+speed = 1
 turn_speed = math.pi / 180 * 1
-vision_distance = 150
-wall_offset = 120
-simulation_speed = 60  # updates per second
+vision_distance = 100
+wall_offset = 100
+simulation_speed = 200  # updates per second
 screen_size = (1000, 1000)
 
 
@@ -15,12 +15,10 @@ class Boid(pygame.sprite.Sprite):
     def __init__(self, game, pos, *groups: pygame.sprite.Group):
         super().__init__(*groups)
 
+        self.evadingWall = False
         self.game = game
-
         self.pos = pygame.Vector2(pos)
-
         self.angle = math.radians(random.randint(0, 360))
-
         self.image = pygame.Surface((10, 10))
         self.image.fill("blue")
         self.rect = self.image.get_rect(center=self.pos)
@@ -32,7 +30,8 @@ class Boid(pygame.sprite.Sprite):
         for boid in self.game.boids:
             if boid == self:
                 continue
-            if self.pos.distance_to(boid.pos) < vision_distance:
+
+            if self.pos.distance_to(boid.pos) < vision_distance and not self.evadingWall:
                 # average their angles
                 average = (self.angle + boid.angle) / 2
                 if self.angle < average:
@@ -41,32 +40,38 @@ class Boid(pygame.sprite.Sprite):
                     self.angle -= turn_speed
 
             if self.pos.distance_to(boid.pos) <= self.rect.x:
-                # point angles away from each-other
+                # point angles away from each-other as to not collide
                 pass
 
         # turn away from walls
         if self.pos.x < 0 + wall_offset:
+            self.evadingWall = True
             if self.angle >= math.pi:
                 self.angle += turn_speed
             elif self.angle < math.pi:
                 self.angle -= turn_speed
         elif self.pos.x > self.game.screen.get_width() - wall_offset:
+            self.evadingWall = True
             if self.angle <= math.pi:
                 self.angle += turn_speed
             elif self.angle < math.pi * 2:
                 self.angle -= turn_speed
         elif self.pos.y < 0 + wall_offset:
+            self.evadingWall = True
             if self.angle >= math.pi / 2:
                 self.angle += turn_speed
             elif self.angle < math.pi / 2 or self.angle >= math.pi + (
                     math.pi / 2):  # less than up, or more than right (zero is to the right)
                 self.angle -= turn_speed
         elif self.pos.y > self.game.screen.get_height() - wall_offset:
+            self.evadingWall = True
             if self.angle >= math.pi + (math.pi / 2) or self.angle < (
                     math.pi / 2):  # less than down, or less than up (zero is to the right)
                 self.angle += turn_speed
             elif self.angle < math.pi + (math.pi / 2):
                 self.angle -= turn_speed
+        else:
+            self.evadingWall = False
 
         # collide with walls
         if self.pos.x < 0:
