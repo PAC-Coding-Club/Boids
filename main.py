@@ -1,10 +1,15 @@
 import math
 import random
-
 import pygame
-debug = True
-speed = 1
-turn_speed = math.pi / 180 * 3
+
+debug = False
+speed = 3
+turn_speed = math.pi / 180 * 1
+vision_distance = 150
+wall_offset = 120
+simulation_speed = 60  # updates per second
+screen_size = (1000, 1000)
+
 
 class Boid(pygame.sprite.Sprite):
     def __init__(self, game, pos, *groups: pygame.sprite.Group):
@@ -17,7 +22,7 @@ class Boid(pygame.sprite.Sprite):
         self.angle = math.radians(random.randint(0, 360))
 
         self.image = pygame.Surface((10, 10))
-        self.image.fill("red")
+        self.image.fill("blue")
         self.rect = self.image.get_rect(center=self.pos)
 
     def update(self):
@@ -27,61 +32,73 @@ class Boid(pygame.sprite.Sprite):
         for boid in self.game.boids:
             if boid == self:
                 continue
-            if self.pos.distance_to(boid.pos) < 30:
+            if self.pos.distance_to(boid.pos) < vision_distance:
                 # average their angles
                 average = (self.angle + boid.angle) / 2
-                if self.angle < average - turn_speed:
-                    self.angle += 0.01
-                elif self.angle > average + turn_speed:
-                    self.angle -= 0.01
+                if self.angle < average:
+                    self.angle += turn_speed
+                elif self.angle > average:
+                    self.angle -= turn_speed
 
             if self.pos.distance_to(boid.pos) <= self.rect.x:
                 # point angles away from each-other
                 pass
 
-
         # turn away from walls
-        offset = 60
-        if self.pos.x < 0 + offset:
+        if self.pos.x < 0 + wall_offset:
             if self.angle >= math.pi:
                 self.angle += turn_speed
             elif self.angle < math.pi:
                 self.angle -= turn_speed
-        elif self.pos.x > self.game.screen.get_width() - offset:
+        elif self.pos.x > self.game.screen.get_width() - wall_offset:
             if self.angle <= math.pi:
                 self.angle += turn_speed
             elif self.angle < math.pi * 2:
                 self.angle -= turn_speed
-        elif self.pos.y < 0 + offset:
+        elif self.pos.y < 0 + wall_offset:
             if self.angle >= math.pi / 2:
                 self.angle += turn_speed
-            elif self.angle < math.pi / 2 or self.angle > math.pi + (math.pi / 2): # less than up, or more than right (zero is to the right)
+            elif self.angle < math.pi / 2 or self.angle >= math.pi + (
+                    math.pi / 2):  # less than up, or more than right (zero is to the right)
                 self.angle -= turn_speed
-        elif self.pos.y > self.game.screen.get_height() - offset:
-            if self.angle >= math.pi + (math.pi / 2) or self.angle < (math.pi / 2): # less than down, or less than up (zero is to the right)
+        elif self.pos.y > self.game.screen.get_height() - wall_offset:
+            if self.angle >= math.pi + (math.pi / 2) or self.angle < (
+                    math.pi / 2):  # less than down, or less than up (zero is to the right)
                 self.angle += turn_speed
             elif self.angle < math.pi + (math.pi / 2):
                 self.angle -= turn_speed
+
+        # collide with walls
+        if self.pos.x < 0:
+            self.pos.x = 0
+        if self.pos.x > self.game.screen.get_width():
+            self.pos.x = self.game.screen.get_width()
+        if self.pos.y < 0:
+            self.pos.y = 0
+        if self.pos.y > self.game.screen.get_height():
+            self.pos.y = self.game.screen.get_height()
 
         if self.angle > math.pi * 2:
             self.angle -= math.pi * 2
         if self.angle < 0:
             self.angle += math.pi * 2
 
+
 class Game:
     def __init__(self):
         self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode((800, 600))
+        self.screen = pygame.display.set_mode(screen_size)
 
         self.boids = pygame.sprite.Group()
 
     def render(self):
         self.screen.fill((255, 255, 255))
 
-        self.boids.draw(self.screen)
         if debug:
             for boid in self.boids:
-                pygame.draw.line(self.screen, "black", boid.pos, boid.pos + pygame.Vector2(math.cos(boid.angle), -math.sin(boid.angle)) * 50)
+                pygame.draw.circle(self.screen, "black", boid.pos, vision_distance)
+                pygame.draw.line(self.screen, "red", boid.pos, boid.pos + pygame.Vector2(math.cos(boid.angle), -math.sin(boid.angle)) * 50)
+        self.boids.draw(self.screen)
 
         pygame.display.update()
 
@@ -99,6 +116,7 @@ class Game:
 
             self.update()
             self.render()
-            self.clock.tick(60)
+            self.clock.tick(simulation_speed)
+
 
 Game().start()
