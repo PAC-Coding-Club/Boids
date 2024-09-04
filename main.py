@@ -6,7 +6,7 @@ screen = pygame.display.set_mode((800, 600))
 clock = pygame.time.Clock()
 
 align_multiplier = 2
-cohere_multiplier = 3
+cohere_multiplier = 2
 separate_multiplier = 10
 
 align_perception_radius = 100
@@ -35,10 +35,10 @@ class Boid:
         self.velocity = self.velocity.normalize() * self.max_speed
 
         # Wrap around screen edges
-        if self.pos.x < 0: self.pos.x = 800
-        if self.pos.x > 800: self.pos.x = 0
-        if self.pos.y < 0: self.pos.y = 600
-        if self.pos.y > 600: self.pos.y = 0
+        if self.pos.x < 0: self.pos.x = screen.get_width()
+        if self.pos.x > screen.get_width(): self.pos.x = 0
+        if self.pos.y < 0: self.pos.y = screen.get_height()
+        if self.pos.y > screen.get_height(): self.pos.y = 0
 
     # Simple draw method
     def draw(self, screen):
