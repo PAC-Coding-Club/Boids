@@ -5,13 +5,19 @@ pygame.init()
 screen = pygame.display.set_mode((800, 600))
 clock = pygame.time.Clock()
 
-alignment_multiplier = 2
-cohesion_multiplier = 2
-separation_multiplier = 2
+align_multiplier = 2
+cohere_multiplier = 3
+separate_multiplier = 10
+
+align_perception_radius = 100
+cohere_perception_radius = 50
+separate_perception_radius = 15
 
 boid_list = []
 
+
 class Boid:
+    # Initializing the boid with all required variables
     def __init__(self, x, y):
         self.pos = pygame.Vector2(x, y)
         self.velocity = pygame.Vector2(random.uniform(-1, 1), random.uniform(-1, 1))
@@ -21,6 +27,7 @@ class Boid:
 
         boid_list.append(self)
 
+    # Main update code for each boid
     def update(self):
         self.flock(boid_list)
         self.pos += self.velocity
@@ -33,24 +40,26 @@ class Boid:
         if self.pos.y < 0: self.pos.y = 600
         if self.pos.y > 600: self.pos.y = 0
 
+    # Simple draw method
     def draw(self, screen):
         pygame.draw.rect(screen, (255, 255, 255), self.rect)
 
+    # Flock method runs each method affecting the boid's direction
     def flock(self, boids):
-        alignment = self.align(boids) * alignment_multiplier
-        cohesion = self.cohere(boids) * cohesion_multiplier
-        separation = self.separate(boids) * separation_multiplier
+        alignment = self.align(boids) * align_multiplier
+        cohesion = self.cohere(boids) * cohere_multiplier
+        separation = self.separate(boids) * separate_multiplier
 
         # Apply behaviours
         self.velocity += alignment + cohesion + separation
 
+    # Align calculates the average direction of all boids within 50 pixels and matches their direction
     def align(self, boids):
-        perception_radius = 50
         steering = pygame.Vector2(0, 0)
         total = 0
         avg_velocity = pygame.Vector2(0, 0)
         for boid in boids:
-            if boid != self and self.pos.distance_to(boid.pos) < perception_radius:
+            if boid != self and self.pos.distance_to(boid.pos) < align_perception_radius:
                 avg_velocity += boid.velocity
                 total += 1
         if total > 0:
@@ -60,13 +69,13 @@ class Boid:
             steering = steering.normalize() * self.max_force
         return steering
 
+    # Cohere calculates the center point (or average position) of all the boids within 50 pixels and steers toward that point
     def cohere(self, boids):
-        perception_radius = 50
         steering = pygame.Vector2(0, 0)
         total = 0
         centre_of_mass = pygame.Vector2(0, 0)
         for boid in boids:
-            if boid != self and self.pos.distance_to(boid.pos) < perception_radius:
+            if boid != self and self.pos.distance_to(boid.pos) < cohere_perception_radius:
                 centre_of_mass += boid.pos
                 total += 1
         if total > 0:
@@ -77,13 +86,13 @@ class Boid:
             steering = steering.normalize() * self.max_force
         return steering
 
+    # Separation method forces boids to steer away from boids closest to themselves to avoid colliding
     def separate(self, boids):
-        perception_radius = 25
         steering = pygame.Vector2(0, 0)
         total = 0
         for boid in boids:
             distance = self.pos.distance_to(boid.pos)
-            if boid != self and distance < perception_radius:
+            if boid != self and distance < separate_perception_radius:
                 diff = self.pos - boid.pos
                 diff = diff.normalize() / distance
                 steering += diff
@@ -95,6 +104,7 @@ class Boid:
             steering -= self.velocity
             steering = steering.normalize() * self.max_force
         return steering
+
 
 while True:
     for event in pygame.event.get():
